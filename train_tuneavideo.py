@@ -123,7 +123,6 @@ def main(
     unet.requires_grad_(False)
     for name, module in unet.named_modules():
         if name.endswith(tuple(trainable_modules)):
-            print(f"Trainable: {name}")
             for params in module.parameters():
                 params.requires_grad = True
 
@@ -291,6 +290,10 @@ def main(
             with accelerator.accumulate(unet):
                 print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
                 print(f"batch['prompt_ids'].shape: {batch['prompt_ids'].shape}")
+                # Get the text embedding for conditioning
+                encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
+                print(f"encoded text shape: {encoder_hidden_states.shape}")
+
                 # Convert videos to latent space
                 pixel_values = batch["pixel_values"].to(weight_dtype)
                 video_length = pixel_values.shape[1]
@@ -315,9 +318,9 @@ def main(
                 # (this is the forward diffusion process)
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-                # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
-                print(f"encoded text shape: {encoder_hidden_states.shape}")
+                # # Get the text embedding for conditioning
+                # encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
+                # print(f"encoded text shape: {encoder_hidden_states.shape}")
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
