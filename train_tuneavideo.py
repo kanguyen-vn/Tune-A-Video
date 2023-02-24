@@ -99,14 +99,22 @@ def main(
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(f"{output_dir}/samples", exist_ok=True)
         os.makedirs(f"{output_dir}/inv_latents", exist_ok=True)
-        OmegaConf.save(config, os.path.join(output_dir, 'config.yaml'))
+        OmegaConf.save(config, os.path.join(output_dir, "config.yaml"))
 
     # Load scheduler, tokenizer and models.
-    noise_scheduler = DDPMScheduler.from_pretrained(pretrained_model_path, subfolder="scheduler")
-    tokenizer = CLIPTokenizer.from_pretrained(pretrained_model_path, subfolder="tokenizer")
-    text_encoder = CLIPTextModel.from_pretrained(pretrained_model_path, subfolder="text_encoder")
+    noise_scheduler = DDPMScheduler.from_pretrained(
+        pretrained_model_path, subfolder="scheduler"
+    )
+    tokenizer = CLIPTokenizer.from_pretrained(
+        pretrained_model_path, subfolder="tokenizer"
+    )
+    text_encoder = CLIPTextModel.from_pretrained(
+        pretrained_model_path, subfolder="text_encoder"
+    )
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
-    unet = UNet3DConditionModel.from_pretrained_2d(pretrained_model_path, subfolder="unet")
+    unet = UNet3DConditionModel.from_pretrained_2d(
+        pretrained_model_path, subfolder="unet"
+    )
 
     # Freeze vae and text_encoder
     vae.requires_grad_(False)
@@ -115,6 +123,7 @@ def main(
     unet.requires_grad_(False)
     for name, module in unet.named_modules():
         if name.endswith(tuple(trainable_modules)):
+            print(f"Trainable: {name}")
             for params in module.parameters():
                 params.requires_grad = True
 
@@ -122,14 +131,19 @@ def main(
         if is_xformers_available():
             unet.enable_xformers_memory_efficient_attention()
         else:
-            raise ValueError("xformers is not available. Make sure it is installed correctly")
+            raise ValueError(
+                "xformers is not available. Make sure it is installed correctly"
+            )
 
     if gradient_checkpointing:
         unet.enable_gradient_checkpointing()
 
     if scale_lr:
         learning_rate = (
-            learning_rate * gradient_accumulation_steps * train_batch_size * accelerator.num_processes
+            learning_rate
+            * gradient_accumulation_steps
+            * train_batch_size
+            * accelerator.num_processes
         )
 
     # Initialize the optimizer
@@ -158,7 +172,11 @@ def main(
 
     # Preprocessing the dataset
     train_dataset.prompt_ids = tokenizer(
-        train_dataset.prompt, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+        train_dataset.prompt,
+        max_length=tokenizer.model_max_length,
+        padding="max_length",
+        truncation=True,
+        return_tensors="pt",
     ).input_ids[0]
 
     # DataLoaders creation:
@@ -168,11 +186,18 @@ def main(
 
     # Get the validation pipeline
     validation_pipeline = TuneAVideoPipeline(
-        vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, unet=unet,
-        scheduler=DDIMScheduler.from_pretrained(pretrained_model_path, subfolder="scheduler")
+        vae=vae,
+        text_encoder=text_encoder,
+        tokenizer=tokenizer,
+        unet=unet,
+        scheduler=DDIMScheduler.from_pretrained(
+            pretrained_model_path, subfolder="scheduler"
+        ),
     )
     validation_pipeline.enable_vae_slicing()
-    ddim_inv_scheduler = DDIMScheduler.from_pretrained(pretrained_model_path, subfolder='scheduler')
+    ddim_inv_scheduler = DDIMScheduler.from_pretrained(
+        pretrained_model_path, subfolder="scheduler"
+    )
     ddim_inv_scheduler.set_timesteps(validation_data.num_inv_steps)
 
     # Scheduler
@@ -201,7 +226,9 @@ def main(
     vae.to(accelerator.device, dtype=weight_dtype)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / gradient_accumulation_steps
+    )
     # Afterwards we recalculate our number of training epochs
     num_train_epochs = math.ceil(max_train_steps / num_update_steps_per_epoch)
 
@@ -211,13 +238,17 @@ def main(
         accelerator.init_trackers("text2video-fine-tune")
 
     # Train!
-    total_batch_size = train_batch_size * accelerator.num_processes * gradient_accumulation_steps
+    total_batch_size = (
+        train_batch_size * accelerator.num_processes * gradient_accumulation_steps
+    )
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(train_dataset)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {train_batch_size}")
-    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+    logger.info(
+        f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
+    )
     logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {max_train_steps}")
     global_step = 0
@@ -241,7 +272,10 @@ def main(
         resume_step = global_step % num_update_steps_per_epoch
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(global_step, max_train_steps), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(
+        range(global_step, max_train_steps),
+        disable=not accelerator.is_local_main_process,
+    )
     progress_bar.set_description("Steps")
 
     for epoch in range(first_epoch, num_train_epochs):
@@ -255,6 +289,8 @@ def main(
                 continue
 
             with accelerator.accumulate(unet):
+                print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
+                print(f"batch['prompt_ids'].shape: {batch['prompt_ids'].shape}")
                 # Convert videos to latent space
                 pixel_values = batch["pixel_values"].to(weight_dtype)
                 video_length = pixel_values.shape[1]
@@ -267,7 +303,12 @@ def main(
                 noise = torch.randn_like(latents)
                 bsz = latents.shape[0]
                 # Sample a random timestep for each video
-                timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (bsz,), device=latents.device)
+                timesteps = torch.randint(
+                    0,
+                    noise_scheduler.num_train_timesteps,
+                    (bsz,),
+                    device=latents.device,
+                )
                 timesteps = timesteps.long()
 
                 # Add noise to the latents according to the noise magnitude at each timestep
@@ -276,6 +317,7 @@ def main(
 
                 # Get the text embedding for conditioning
                 encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
+                print(f"encoded text shape: {encoder_hidden_states.shape}")
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
@@ -283,10 +325,14 @@ def main(
                 elif noise_scheduler.prediction_type == "v_prediction":
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.prediction_type}")
+                    raise ValueError(
+                        f"Unknown prediction type {noise_scheduler.prediction_type}"
+                    )
 
                 # Predict the noise residual and compute loss
-                model_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                model_pred = unet(
+                    noisy_latents, timesteps, encoder_hidden_states
+                ).sample
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
                 # Gather the losses across all processes for logging (if we use distributed training).
@@ -310,7 +356,9 @@ def main(
 
                 if global_step % checkpointing_steps == 0:
                     if accelerator.is_main_process:
-                        save_path = os.path.join(output_dir, f"checkpoint-{global_step}")
+                        save_path = os.path.join(
+                            output_dir, f"checkpoint-{global_step}"
+                        )
                         accelerator.save_state(save_path)
                         logger.info(f"Saved state to {save_path}")
 
@@ -322,23 +370,39 @@ def main(
 
                         ddim_inv_latent = None
                         if validation_data.use_inv_latent:
-                            inv_latents_path = os.path.join(output_dir, f"inv_latents/ddim_latent-{global_step}.pt")
+                            inv_latents_path = os.path.join(
+                                output_dir, f"inv_latents/ddim_latent-{global_step}.pt"
+                            )
                             ddim_inv_latent = ddim_inversion(
-                                validation_pipeline, ddim_inv_scheduler, video_latent=latents,
-                                num_inv_steps=validation_data.num_inv_steps, prompt="")[-1].to(weight_dtype)
+                                validation_pipeline,
+                                ddim_inv_scheduler,
+                                video_latent=latents,
+                                num_inv_steps=validation_data.num_inv_steps,
+                                prompt="",
+                            )[-1].to(weight_dtype)
                             torch.save(ddim_inv_latent, inv_latents_path)
 
                         for idx, prompt in enumerate(validation_data.prompts):
-                            sample = validation_pipeline(prompt, generator=generator, latents=ddim_inv_latent,
-                                                         **validation_data).videos
-                            save_videos_grid(sample, f"{output_dir}/samples/sample-{global_step}/{prompt}.gif")
+                            sample = validation_pipeline(
+                                prompt,
+                                generator=generator,
+                                latents=ddim_inv_latent,
+                                **validation_data,
+                            ).videos
+                            save_videos_grid(
+                                sample,
+                                f"{output_dir}/samples/sample-{global_step}/{prompt}.gif",
+                            )
                             samples.append(sample)
                         samples = torch.concat(samples)
                         save_path = f"{output_dir}/samples/sample-{global_step}.gif"
                         save_videos_grid(samples, save_path)
                         logger.info(f"Saved samples to {save_path}")
 
-            logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            logs = {
+                "step_loss": loss.detach().item(),
+                "lr": lr_scheduler.get_last_lr()[0],
+            }
             progress_bar.set_postfix(**logs)
 
             if global_step >= max_train_steps:
