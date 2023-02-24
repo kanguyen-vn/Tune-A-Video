@@ -1,4 +1,4 @@
-pretrained_model_path: "CompVis/stable-diffusion-v1-4"
+pretrained_model_path: "./checkpoints/stable-diffusion-v1-4"
 output_dir: "./outputs/man-skiing"
 
 train_data:
