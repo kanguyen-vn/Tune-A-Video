@@ -1,8 +1,8 @@
 pretrained_model_path: "./checkpoints/stable-diffusion-v1-4"
-output_dir: "./outputs/man-surfing_lr3e-5_seed33"
+output_dir: "/projects/adversarialprototypicalcontrastivelearning/kiet/tav_kinetics"
 
 train_data:
-  data_dir: "/home/data/Kinetics/kinetics-400"
+  data_dir: "/projects/adversarialprototypicalcontrastivelearning/video_transformer/dataset/kinetics-400/"
   mode: "train"
   labels:
     - "ice skating"
