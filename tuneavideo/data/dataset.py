@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from einops import rearrange
 
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 import json
 
 import pandas as pd
@@ -56,7 +56,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         data_dir: str,
         mode: str,
         tokenizer=None,
-        label: Union[int, str] = None,
+        labels: List[Union[int, str]] = None,
         width: int = 512,
         height: int = 512,
         n_sample_frames: int = 8,
@@ -69,7 +69,9 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
             "test",
         ], f"mode must be train, val, or test; got {mode}"
         self.data_dir = Path(data_dir)
-        self.label = label
+        if not isinstance(labels, list):
+            labels = [labels]
+        self.labels = labels
         self.data_csv = self.load_labels(mode)
 
         self.tokenizer = tokenizer
@@ -94,11 +96,14 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         id2name = {row["id"]: row["label"] for _, row in name2id_csv.iterrows()}
         labels_csv["label"] = labels_csv["id"].apply(lambda x: id2name[x])
 
-        if self.label is not None:
-            if isinstance(self.label, int):
-                labels_csv = labels_csv[labels_csv["id"] == self.label]
-            elif isinstance(self.label, str):
-                labels_csv = labels_csv[labels_csv["label"] == self.label]
+        if self.labels is not None:
+            ids = []
+            labels = []
+            for label in labels:
+                (ids if isinstance(label, int) else labels).append(label)
+            labels_from_ids = [id2name[id] for id in ids]
+            final_labels = list(set(labels + labels_from_ids))
+            labels_csv = labels_csv[labels_csv["label"].isin(final_labels)]
 
         return labels_csv
 
