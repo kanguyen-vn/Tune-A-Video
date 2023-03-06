@@ -91,21 +91,30 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
 
         labels_csv["videopath"] = labels_csv["videopath"].apply(change_path)
 
-        print(labels_csv.head())
-
         name2id_csv = pd.read_csv(self.data_dir / "name-to-id.csv", header=None)
         name2id_csv.columns = ["id", "label"]
         id2name = {row["id"]: row["label"] for _, row in name2id_csv.iterrows()}
         labels_csv["label"] = labels_csv["id"].apply(lambda x: id2name[x])
+
+        print(labels_csv.head())
+        print(f"len(labels_csv): {len(labels_csv)}")
 
         if self.labels is not None:
             ids = []
             labels = []
             for label in self.labels:
                 (ids if isinstance(label, int) else labels).append(label)
+
+            print(f"ids: {ids}")
+            print(f"labels: {labels}")
             labels_from_ids = [id2name[id] for id in ids]
+            print(f"labels_from_ids: {labels_from_ids}")
             final_labels = list(set(labels + labels_from_ids))
+            print(f"final_labels: {final_labels}")
             labels_csv = labels_csv[labels_csv["label"].isin(final_labels)]
+
+        print(labels_csv.head())
+        print(f"len(labels_csv): {len(labels_csv)}")
 
         return labels_csv
 
