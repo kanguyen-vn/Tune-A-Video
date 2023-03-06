@@ -96,25 +96,15 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         id2name = {row["id"]: row["label"] for _, row in name2id_csv.iterrows()}
         labels_csv["label"] = labels_csv["id"].apply(lambda x: id2name[x])
 
-        print(labels_csv.head())
-        print(f"len(labels_csv): {len(labels_csv)}")
-
         if self.labels is not None:
             ids = []
             labels = []
             for label in self.labels:
                 (ids if isinstance(label, int) else labels).append(label)
 
-            print(f"ids: {ids}")
-            print(f"labels: {labels}")
             labels_from_ids = [id2name[id] for id in ids]
-            print(f"labels_from_ids: {labels_from_ids}")
             final_labels = list(set(labels + labels_from_ids))
-            print(f"final_labels: {final_labels}")
             labels_csv = labels_csv[labels_csv["label"].isin(final_labels)]
-
-        print(labels_csv.head())
-        print(f"len(labels_csv): {len(labels_csv)}")
 
         return labels_csv
 
@@ -123,6 +113,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
 
     def __getitem__(self, index):
         row = self.data_csv.iloc[[index]]
+        print(f'row["videopath"]: {row["videopath"]}')
         vr = decord.VideoReader(row["videopath"], width=self.width, height=self.height)
         sample_index = list(
             range(self.sample_start_idx, len(vr), self.sample_frame_rate)
