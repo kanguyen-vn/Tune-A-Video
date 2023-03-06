@@ -228,6 +228,7 @@ def main(
     text_encoder.to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
 
+    print(f"len(pretrain_dataset): {len(pretrain_dataset)}")
     print(f"len(pretrain_dataloader): {len(pretrain_dataloader)}")
     print(f"gradient_accumulation_steps: {gradient_accumulation_steps}")
 
