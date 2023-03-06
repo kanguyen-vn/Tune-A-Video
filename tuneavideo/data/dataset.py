@@ -113,7 +113,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
 
     def __getitem__(self, index):
         row = self.data_csv.iloc[[index]]
-        videopath = row["videopath"].values[0]
+        videopath = str(row["videopath"].values[0])
         vr = decord.VideoReader(videopath, width=self.width, height=self.height)
         sample_index = list(
             range(self.sample_start_idx, len(vr), self.sample_frame_rate)
