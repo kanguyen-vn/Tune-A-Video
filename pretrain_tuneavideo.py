@@ -415,4 +415,6 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="./configs/pretrain.yaml")
     args = parser.parse_args()
 
+    print(args)
+
     main(**OmegaConf.load(args.config))
