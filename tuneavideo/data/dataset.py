@@ -113,15 +113,15 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
 
     def __getitem__(self, index):
         row = self.data_csv.iloc[[index]]
-        print(f'row["videopath"]: {row["videopath"]}')
-        vr = decord.VideoReader(row["videopath"], width=self.width, height=self.height)
+        videopath = row["videopath"].values[0]
+        vr = decord.VideoReader(videopath, width=self.width, height=self.height)
         sample_index = list(
             range(self.sample_start_idx, len(vr), self.sample_frame_rate)
         )[: self.n_sample_frames]
         video = vr.get_batch(sample_index)
         video = rearrange(video, "f h w c -> f c h w")
 
-        prompt = row["label"]
+        prompt = row["label"].values[0]
         prompt_ids = self.tokenizer(
             prompt,
             max_length=self.tokenizer.model_max_length,
