@@ -89,7 +89,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
             path = Path(entry)
             return self.data_dir / path.relative_to(path.parents[2])
 
-        labels_csv["id"] = labels_csv["id"].apply(change_path)
+        labels_csv["videopath"] = labels_csv["videopath"].apply(change_path)
 
         name2id_csv = pd.read_csv(self.data_dir / "name-to-id.csv", header=None)
         name2id_csv.columns = ["id", "label"]
