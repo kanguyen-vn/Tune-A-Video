@@ -7,7 +7,7 @@ from einops import rearrange
 
 from pathlib import Path
 from typing import Union, List
-import json
+import collections
 
 import pandas as pd
 
@@ -69,7 +69,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
             "test",
         ], f"mode must be train, val, or test; got {mode}"
         self.data_dir = Path(data_dir)
-        if not isinstance(labels, list):
+        if not isinstance(labels, collections.Sequence):
             labels = [labels]
         self.labels = labels
         self.data_csv = self.load_labels(mode)
