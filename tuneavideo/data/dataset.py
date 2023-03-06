@@ -91,6 +91,8 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
 
         labels_csv["videopath"] = labels_csv["videopath"].apply(change_path)
 
+        print(labels_csv.head())
+
         name2id_csv = pd.read_csv(self.data_dir / "name-to-id.csv", header=None)
         name2id_csv.columns = ["id", "label"]
         id2name = {row["id"]: row["label"] for _, row in name2id_csv.iterrows()}
@@ -99,7 +101,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         if self.labels is not None:
             ids = []
             labels = []
-            for label in labels:
+            for label in self.labels:
                 (ids if isinstance(label, int) else labels).append(label)
             labels_from_ids = [id2name[id] for id in ids]
             final_labels = list(set(labels + labels_from_ids))
