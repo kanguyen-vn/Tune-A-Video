@@ -21,7 +21,7 @@ from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version
 from diffusers.utils.import_utils import is_xformers_available
 from tqdm.auto import tqdm
-from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTokenizer, XCLIPTextModel, AutoTokenizer
 
 from tuneavideo.models.unet import UNet3DConditionModel
 from tuneavideo.data.dataset import TuneAVideoDataset, TuneAVideoKineticsPretrainDataset
@@ -42,6 +42,7 @@ def main(
     train_data: Dict,
     validation_data: Dict,
     validation_steps: int = 100,
+    text_encoder_name: str = "clip",
     trainable_modules: Tuple[str] = (
         "attn1.to_q",
         "attn2.to_q",
@@ -80,7 +81,7 @@ def main(
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO,
     )
-    logging.info("Start pretraining...")
+    logger.info("Start pretraining...")
     logger.info(accelerator.state, main_process_only=False)
     if accelerator.is_local_main_process:
         transformers.utils.logging.set_verbosity_warning()
@@ -104,12 +105,16 @@ def main(
     noise_scheduler = DDPMScheduler.from_pretrained(
         pretrained_model_path, subfolder="scheduler"
     )
-    tokenizer = CLIPTokenizer.from_pretrained(
-        pretrained_model_path, subfolder="tokenizer"
-    )
-    text_encoder = CLIPTextModel.from_pretrained(
-        pretrained_model_path, subfolder="text_encoder"
-    )
+    if text_encoder_name == "clip":
+        tokenizer = CLIPTokenizer.from_pretrained(
+            pretrained_model_path, subfolder="tokenizer"
+        )
+        text_encoder = CLIPTextModel.from_pretrained(
+            pretrained_model_path, subfolder="text_encoder"
+        )
+    elif text_encoder_name == "xclip":
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
+        text_encoder = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
         pretrained_model_path, subfolder="unet"
@@ -411,6 +416,7 @@ def main(
 
 
 if __name__ == "__main__":
+    logger.info("Start of code.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/pretrain.yaml")
     args = parser.parse_args()
