@@ -33,9 +33,7 @@ from einops import rearrange
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.10.0.dev0")
 
-print("Before get logger")
 logger = get_logger(__name__, log_level="INFO")
-print("After get logger")
 
 
 def main(
@@ -418,9 +416,6 @@ def main(
 
 
 if __name__ == "__main__":
-    logging.info("Start of code logging.")
-    print("Start of code print.")
-    logger.info("Start of code.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/pretrain.yaml")
     args = parser.parse_args()
