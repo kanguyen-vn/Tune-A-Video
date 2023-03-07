@@ -416,6 +416,8 @@ def main(
 
 
 if __name__ == "__main__":
+    logging.info("Start of code logging.")
+    print("Start of code print.")
     logger.info("Start of code.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/pretrain.yaml")
