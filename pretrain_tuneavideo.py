@@ -15,7 +15,7 @@ import diffusers
 import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
-from accelerate.utils import set_seed, DistributedDataParallelKwargs
+from accelerate.utils import set_seed  # , DistributedDataParallelKwargs
 from diffusers import AutoencoderKL, DDPMScheduler, DDIMScheduler
 from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version
@@ -73,7 +73,7 @@ def main(
     accelerator = Accelerator(
         gradient_accumulation_steps=gradient_accumulation_steps,
         mixed_precision=mixed_precision,
-        kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)],
+        # kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)],
     )
 
     # Make one log on every process with the configuration for debugging.
