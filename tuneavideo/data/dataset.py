@@ -73,6 +73,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         if not isinstance(labels, collections.Sequence):
             labels = [labels]
         self.labels = labels
+        self.n_per_class = n_per_class
         self.data_csv = self.load_labels(mode)
 
         self.tokenizer = tokenizer
@@ -81,7 +82,6 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         self.n_sample_frames = n_sample_frames
         self.sample_start_idx = sample_start_idx
         self.sample_frame_rate = sample_frame_rate
-        self.n_per_class = n_per_class
 
     def load_labels(self, mode: str):
         labels_csv = pd.read_csv(self.data_dir / f"{mode}.csv", header=None)
