@@ -298,9 +298,9 @@ def main(
                     progress_bar.update(1)
                 continue
 
-            videopaths = [Path(videopath) for videopath in batch["videopath"]]
-            for videopath in videopaths:
-                logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
+            # videopaths = [Path(videopath) for videopath in batch["videopath"]]
+            # for videopath in videopaths:
+            #     logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
 
             with accelerator.accumulate(unet):
                 # Convert videos to latent space
@@ -405,7 +405,7 @@ def main(
             }
             progress_bar.set_postfix(**logs)
 
-            if global_step >= max_train_steps * len(pretrain_dataset):
+            if global_step >= max_train_steps:
                 break
 
     # Create the pipeline using the trained modules and save it.
