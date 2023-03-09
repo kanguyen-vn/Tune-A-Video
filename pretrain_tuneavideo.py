@@ -5,6 +5,7 @@ import inspect
 import math
 import os
 from typing import Dict, Optional, Tuple
+from pathlib import Path
 from omegaconf import OmegaConf
 
 import torch
@@ -297,6 +298,9 @@ def main(
                     progress_bar.update(1)
                 continue
 
+            videopath = Path(batch["videopath"])
+            logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
+
             with accelerator.accumulate(unet):
                 # Convert videos to latent space
                 pixel_values = batch["pixel_values"].to(weight_dtype)
@@ -400,8 +404,14 @@ def main(
             }
             progress_bar.set_postfix(**logs)
 
-            if global_step >= max_train_steps:
+            if global_step >= max_train_steps * len(pretrain_dataset):
                 break
+
+            progress_bar = tqdm(
+                range(global_step % max_train_steps, max_train_steps),
+                disable=not accelerator.is_local_main_process,
+            )
+            progress_bar.set_description("Steps")
 
     # Create the pipeline using the trained modules and save it.
     accelerator.wait_for_everyone()
