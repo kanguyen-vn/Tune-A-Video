@@ -34,7 +34,7 @@ validation_data:
 text_encoder_name: clip
 learning_rate: 3e-5
 train_batch_size: 1
-max_train_steps: 300
+max_train_steps: 15000 # 300 * 50
 checkpointing_steps: 1000
 validation_steps: 300
 trainable_modules:
