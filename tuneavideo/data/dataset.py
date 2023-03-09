@@ -62,6 +62,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         n_sample_frames: int = 8,
         sample_start_idx: int = 0,
         sample_frame_rate: int = 1,
+        n_per_class: int = -1,
     ):
         assert mode in [
             "train",
@@ -80,6 +81,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         self.n_sample_frames = n_sample_frames
         self.sample_start_idx = sample_start_idx
         self.sample_frame_rate = sample_frame_rate
+        self.n_per_class = n_per_class
 
     def load_labels(self, mode: str):
         labels_csv = pd.read_csv(self.data_dir / f"{mode}.csv", header=None)
@@ -105,6 +107,11 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
             labels_from_ids = [id2name[id] for id in ids]
             final_labels = list(set(labels + labels_from_ids))
             labels_csv = labels_csv[labels_csv["label"].isin(final_labels)]
+
+        if self.n_per_class != -1:
+            labels_csv = labels_csv.groupby("id").sample(
+                n=self.n_per_class, random_state=42
+            )
 
         return labels_csv
 

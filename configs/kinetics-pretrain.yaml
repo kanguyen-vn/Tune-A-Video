@@ -6,12 +6,7 @@ train_data:
   mode: "train"
   labels:
     - "ice skating"
-    - "ice climbing"
-    - "jet skiing"
-    - "kicking soccer ball"
     - "playing badminton"
-    - "playing ice hockey"
-    - "playing kickball"
     - "playing tennis"
     - "playing cricket"
     - "playing basketball"
@@ -20,13 +15,16 @@ train_data:
   height: 512
   sample_start_idx: 0
   sample_frame_rate: 1
+  n_per_class: 10
 
 validation_data:
   prompts:
-    - "a panda is playing basketball"
-    - "a boy, wearing a birthday hat, is playing basketball"
-    - "a raccoon is playing basketball, cartoon style"
-    - "Iron Man is playing basketball in the desert"
+    - "a boy is kicking soccer ball"
+    - "a girl is ice climbing"
+    - "a boy is ice dancing in a competition"
+    - "the boy is doing soccer penalty"
+    - "a player is swinging tennis"
+    - "a man is skiing"
   video_length: 8
   width: 512
   height: 512
@@ -38,7 +36,7 @@ learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 300
 checkpointing_steps: 1000
-validation_steps: 100
+validation_steps: 300
 trainable_modules:
   - "attn1.to_q"
   - "attn2.to_q"
