@@ -408,12 +408,6 @@ def main(
             if global_step >= max_train_steps * len(pretrain_dataset):
                 break
 
-            progress_bar = tqdm(
-                range(global_step % max_train_steps, max_train_steps),
-                disable=not accelerator.is_local_main_process,
-            )
-            progress_bar.set_description("Steps")
-
     # Create the pipeline using the trained modules and save it.
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
