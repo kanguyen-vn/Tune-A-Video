@@ -298,8 +298,9 @@ def main(
                     progress_bar.update(1)
                 continue
 
-            videopath = Path(batch["videopath"])
-            logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
+            videopaths = [Path(videopath) for videopath in batch["videopath"]]
+            for videopath in videopaths:
+                logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
 
             with accelerator.accumulate(unet):
                 # Convert videos to latent space
