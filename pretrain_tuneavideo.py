@@ -5,6 +5,7 @@ import inspect
 import math
 import os
 from typing import Dict, Optional, Tuple
+from pathlib import Path
 from omegaconf import OmegaConf
 
 import torch
@@ -15,18 +16,18 @@ import diffusers
 import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
-from accelerate.utils import set_seed
+from accelerate.utils import set_seed  # , DistributedDataParallelKwargs
 from diffusers import AutoencoderKL, DDPMScheduler, DDIMScheduler
 from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version
 from diffusers.utils.import_utils import is_xformers_available
 from tqdm.auto import tqdm
-from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTokenizer, XCLIPTextModel, AutoTokenizer
 
 from tuneavideo.models.unet import UNet3DConditionModel
-from tuneavideo.data.dataset import TuneAVideoDataset
+from tuneavideo.data.dataset import TuneAVideoDataset, TuneAVideoKineticsPretrainDataset
 from tuneavideo.pipelines.pipeline_tuneavideo import TuneAVideoPipeline
-from tuneavideo.util import save_videos_grid, ddim_inversion
+from tuneavideo.util import save_videos_grid
 from einops import rearrange
 
 
@@ -42,6 +43,7 @@ def main(
     train_data: Dict,
     validation_data: Dict,
     validation_steps: int = 100,
+    text_encoder_name: str = "clip",
     trainable_modules: Tuple[str] = (
         "attn1.to_q",
         "attn2.to_q",
@@ -72,6 +74,7 @@ def main(
     accelerator = Accelerator(
         gradient_accumulation_steps=gradient_accumulation_steps,
         mixed_precision=mixed_precision,
+        # kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)],
     )
 
     # Make one log on every process with the configuration for debugging.
@@ -80,6 +83,7 @@ def main(
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO,
     )
+    logger.info("Start pretraining...")
     logger.info(accelerator.state, main_process_only=False)
     if accelerator.is_local_main_process:
         transformers.utils.logging.set_verbosity_warning()
@@ -94,23 +98,25 @@ def main(
 
     # Handle the output folder creation
     if accelerator.is_main_process:
-        # now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-        # output_dir = os.path.join(output_dir, now)
+        now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        output_dir = os.path.join(output_dir, now)
         os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(f"{output_dir}/samples", exist_ok=True)
-        os.makedirs(f"{output_dir}/inv_latents", exist_ok=True)
         OmegaConf.save(config, os.path.join(output_dir, "config.yaml"))
 
     # Load scheduler, tokenizer and models.
     noise_scheduler = DDPMScheduler.from_pretrained(
         pretrained_model_path, subfolder="scheduler"
     )
-    tokenizer = CLIPTokenizer.from_pretrained(
-        pretrained_model_path, subfolder="tokenizer"
-    )
-    text_encoder = CLIPTextModel.from_pretrained(
-        pretrained_model_path, subfolder="text_encoder"
-    )
+    if text_encoder_name == "clip":
+        tokenizer = CLIPTokenizer.from_pretrained(
+            pretrained_model_path, subfolder="tokenizer"
+        )
+        text_encoder = CLIPTextModel.from_pretrained(
+            pretrained_model_path, subfolder="text_encoder"
+        )
+    elif text_encoder_name == "xclip":
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
+        text_encoder = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
         pretrained_model_path, subfolder="unet"
@@ -166,22 +172,29 @@ def main(
         eps=adam_epsilon,
     )
 
-    # Get the training dataset
-    train_dataset = TuneAVideoDataset(**train_data)
-
-    # Preprocessing the dataset
-    train_dataset.prompt_ids = tokenizer(
-        train_dataset.prompt,
-        max_length=tokenizer.model_max_length,
-        padding="max_length",
-        truncation=True,
-        return_tensors="pt",
-    ).input_ids[0]
-
-    # DataLoaders creation:
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=train_batch_size
+    pretrain_dataset = TuneAVideoKineticsPretrainDataset(**train_data)
+    if pretrain_dataset.tokenizer is None:
+        pretrain_dataset.tokenizer = tokenizer
+    pretrain_dataloader = torch.utils.data.DataLoader(
+        pretrain_dataset, batch_size=train_batch_size
     )
+
+    # # Get the training dataset
+    # train_dataset = TuneAVideoDataset(**train_data)
+
+    # # Preprocessing the dataset
+    # train_dataset.prompt_ids = tokenizer(
+    #     train_dataset.prompt,
+    #     max_length=tokenizer.model_max_length,
+    #     padding="max_length",
+    #     truncation=True,
+    #     return_tensors="pt",
+    # ).input_ids[0]
+
+    # # DataLoaders creation:
+    # train_dataloader = torch.utils.data.DataLoader(
+    #     train_dataset, batch_size=train_batch_size
+    # )
 
     # Get the validation pipeline
     validation_pipeline = TuneAVideoPipeline(
@@ -193,11 +206,6 @@ def main(
             pretrained_model_path, subfolder="scheduler"
         ),
     )
-    validation_pipeline.enable_vae_slicing()
-    ddim_inv_scheduler = DDIMScheduler.from_pretrained(
-        pretrained_model_path, subfolder="scheduler"
-    )
-    ddim_inv_scheduler.set_timesteps(validation_data.num_inv_steps)
 
     # Scheduler
     lr_scheduler = get_scheduler(
@@ -208,8 +216,11 @@ def main(
     )
 
     # Prepare everything with our `accelerator`.
-    unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        unet, optimizer, train_dataloader, lr_scheduler
+    # unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+    #     unet, optimizer, train_dataloader, lr_scheduler
+    # )
+    unet, optimizer, pretrain_dataloader, lr_scheduler = accelerator.prepare(
+        unet, optimizer, pretrain_dataloader, lr_scheduler
     )
 
     # For mixed precision training we cast the text_encoder and vae weights to half-precision
@@ -226,7 +237,7 @@ def main(
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(
-        len(train_dataloader) / gradient_accumulation_steps
+        len(pretrain_dataloader) / gradient_accumulation_steps
     )
     # Afterwards we recalculate our number of training epochs
     num_train_epochs = math.ceil(max_train_steps / num_update_steps_per_epoch)
@@ -242,7 +253,7 @@ def main(
     )
 
     logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(train_dataset)}")
+    logger.info(f"  Num examples = {len(pretrain_dataset)}")
     logger.info(f"  Num Epochs = {num_train_epochs}")
     logger.info(f"  Instantaneous batch size per device = {train_batch_size}")
     logger.info(
@@ -280,25 +291,24 @@ def main(
     for epoch in range(first_epoch, num_train_epochs):
         unet.train()
         train_loss = 0.0
-        for step, batch in enumerate(train_dataloader):
+        for step, batch in enumerate(pretrain_dataloader):
             # Skip steps until we reach the resumed step
             if resume_from_checkpoint and epoch == first_epoch and step < resume_step:
                 if step % gradient_accumulation_steps == 0:
                     progress_bar.update(1)
                 continue
 
-            with accelerator.accumulate(unet):
-                print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
-                print(f"batch['prompt_ids'].shape: {batch['prompt_ids'].shape}")
-                # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
-                print(f"encoded text shape: {encoder_hidden_states.shape}")
+            # videopaths = [Path(videopath) for videopath in batch["videopath"]]
+            # for videopath in videopaths:
+            #     logger.info(f"File: {str(videopath.relative_to(videopath.parents[1]))}")
 
+            with accelerator.accumulate(unet):
                 # Convert videos to latent space
                 pixel_values = batch["pixel_values"].to(weight_dtype)
                 video_length = pixel_values.shape[1]
                 pixel_values = rearrange(pixel_values, "b f c h w -> (b f) c h w")
-                latents = vae.encode(pixel_values).latent_dist.sample()
+                with torch.no_grad():
+                    latents = vae.encode(pixel_values).latent_dist.sample()
                 latents = rearrange(latents, "(b f) c h w -> b c f h w", f=video_length)
                 latents = latents * 0.18215
 
@@ -318,9 +328,9 @@ def main(
                 # (this is the forward diffusion process)
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-                # # Get the text embedding for conditioning
-                # encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
-                # print(f"encoded text shape: {encoder_hidden_states.shape}")
+                with torch.no_grad():
+                    # Get the text embedding for conditioning
+                    encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
@@ -367,38 +377,25 @@ def main(
 
                 if global_step % validation_steps == 0:
                     if accelerator.is_main_process:
+                        save_path = os.path.join(
+                            output_dir, f"samples/sample-{global_step}.gif"
+                        )
                         samples = []
                         generator = torch.Generator(device=latents.device)
                         generator.manual_seed(seed)
-
-                        ddim_inv_latent = None
-                        if validation_data.use_inv_latent:
-                            inv_latents_path = os.path.join(
-                                output_dir, f"inv_latents/ddim_latent-{global_step}.pt"
-                            )
-                            ddim_inv_latent = ddim_inversion(
-                                validation_pipeline,
-                                ddim_inv_scheduler,
-                                video_latent=latents,
-                                num_inv_steps=validation_data.num_inv_steps,
-                                prompt="",
-                            )[-1].to(weight_dtype)
-                            torch.save(ddim_inv_latent, inv_latents_path)
-
                         for idx, prompt in enumerate(validation_data.prompts):
                             sample = validation_pipeline(
-                                prompt,
-                                generator=generator,
-                                latents=ddim_inv_latent,
-                                **validation_data,
+                                prompt, generator=generator, **validation_data
                             ).videos
                             save_videos_grid(
                                 sample,
-                                f"{output_dir}/samples/sample-{global_step}/{prompt}.gif",
+                                os.path.join(
+                                    output_dir,
+                                    f"samples/sample-{global_step}/{prompt}.gif",
+                                ),
                             )
                             samples.append(sample)
                         samples = torch.concat(samples)
-                        save_path = f"{output_dir}/samples/sample-{global_step}.gif"
                         save_videos_grid(samples, save_path)
                         logger.info(f"Saved samples to {save_path}")
 
@@ -428,9 +425,7 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config", type=str, default="./configs/kinetics-pretrain.yaml"
-    )
+    parser.add_argument("--config", type=str, default="./configs/pretrain.yaml")
     args = parser.parse_args()
 
     main(**OmegaConf.load(args.config))

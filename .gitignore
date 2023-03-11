@@ -1,3 +1,2 @@
-checkpoints/
+private*.yaml
 outputs/
-configs/pretrain.yaml

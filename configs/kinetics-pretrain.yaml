@@ -1,0 +1,49 @@
+pretrained_model_path: "/projects/adversarialprototypicalcontrastivelearning/kiet/stable-diffusion-v1-4"
+output_dir: "/projects/adversarialprototypicalcontrastivelearning/kiet/tav_kinetics"
+
+train_data:
+  data_dir: "/projects/adversarialprototypicalcontrastivelearning/video_transformer/dataset/kinetics-400/"
+  mode: "train"
+  labels:
+    - "ice skating"
+    - "playing badminton"
+    - "playing tennis"
+    - "playing cricket"
+    - "playing basketball"
+  n_sample_frames: 8
+  width: 512
+  height: 512
+  sample_start_idx: 0
+  sample_frame_rate: 1
+  n_per_class: 10
+
+validation_data:
+  prompts:
+    - "a boy is kicking soccer ball"
+    - "a girl is ice climbing"
+    - "a boy is ice dancing in a competition"
+    - "the boy is doing soccer penalty"
+    - "a player is swinging tennis"
+    - "a man is skiing"
+  video_length: 8
+  width: 512
+  height: 512
+  num_inference_steps: 50
+  guidance_scale: 7.5
+
+text_encoder_name: clip
+learning_rate: 3e-5
+train_batch_size: 1
+max_train_steps: 15000 # 300 * 50
+checkpointing_steps: 1000
+validation_steps: 300
+trainable_modules:
+  - "attn1.to_q"
+  - "attn2.to_q"
+  - "attn_temp"
+
+seed: 33
+mixed_precision: fp16
+use_8bit_adam: False
+gradient_checkpointing: True
+enable_xformers_memory_efficient_attention: True
