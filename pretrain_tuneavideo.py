@@ -4,6 +4,7 @@ import logging
 import inspect
 import math
 import os
+import json
 from typing import Dict, Optional, Tuple
 from pathlib import Path
 from omegaconf import OmegaConf
@@ -23,6 +24,8 @@ from diffusers.utils import check_min_version
 from diffusers.utils.import_utils import is_xformers_available
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer, XCLIPTextModel, AutoTokenizer
+
+from torchmetrics.multimodal.clip_score import clip_score as clip_score_metric
 
 from tuneavideo.models.unet import UNet3DConditionModel
 from tuneavideo.data.dataset import TuneAVideoDataset, TuneAVideoKineticsPretrainDataset
@@ -247,6 +250,10 @@ def main(
     if accelerator.is_main_process:
         accelerator.init_trackers("text2video-fine-tune")
 
+    # Initialize metric
+    # clip_score_metric = CLIPScore(model_name_or_path="openai/clip-vit-base-patch16").to(accelerator.device, dtype=weight_dtype)
+    clip_scores = {}
+
     # Train!
     total_batch_size = (
         train_batch_size * accelerator.num_processes * gradient_accumulation_steps
@@ -332,6 +339,11 @@ def main(
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
 
+                if text_encoder_name == "x_clip":
+                    encoder_hidden_states = F.pad(
+                        encoder_hidden_states, (0, 768 - 512), "constant", 0.0
+                    )
+
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
                     target = noise
@@ -380,6 +392,7 @@ def main(
                         save_path = os.path.join(
                             output_dir, f"samples/sample-{global_step}.gif"
                         )
+                        clip_scores[f"samples/sample-{global_step}.gif"] = {}
                         samples = []
                         generator = torch.Generator(device=latents.device)
                         generator.manual_seed(seed)
@@ -395,6 +408,25 @@ def main(
                                 ),
                             )
                             samples.append(sample)
+                            video = sample.squeeze(0)
+                            clip_score = clip_score_metric(
+                                video,
+                                [prompt] * video.shape[0],
+                                "openai/clip-vit-base-patch16",
+                            )
+                            clip_scores[f"samples/sample-{global_step}.gif"][
+                                prompt
+                            ] = clip_score
+                            with open(
+                                os.path.join(
+                                    output_dir,
+                                    f"samples/sample-{global_step}-scores.json",
+                                ),
+                                "w",
+                            ) as f:
+                                json.dump(
+                                    clip_scores[f"samples/sample-{global_step}.gif"], f
+                                )
                         samples = torch.concat(samples)
                         save_videos_grid(samples, save_path)
                         logger.info(f"Saved samples to {save_path}")
@@ -407,6 +439,10 @@ def main(
 
             if global_step >= max_train_steps:
                 break
+
+    if accelerator.is_main_process:
+        with open(os.path.join(output_dir, f"all-scores.json"), "w") as f:
+            json.dump(clip_scores, f)
 
     # Create the pipeline using the trained modules and save it.
     accelerator.wait_for_everyone()

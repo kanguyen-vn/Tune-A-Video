@@ -1,4 +1,4 @@
-pretrained_model_path: "/projects/adversarialprototypicalcontrastivelearning/kiet/stable-diffusion-v1-4"
+pretrained_model_path: "/projects/adversarialprototypicalcontrastivelearning/kiet/stable-diffusion-2-1"
 output_dir: "/projects/adversarialprototypicalcontrastivelearning/kiet/tav_kinetics"
 
 train_data:
@@ -19,6 +19,11 @@ train_data:
 
 validation_data:
   prompts:
+    - "a girl is playing badminton"
+    - "a boy is playing badminton"
+    - "a player is playing cricket"
+    - "the man is playing tennis"
+    - "a boy is playing basketball"
     - "a boy is kicking soccer ball"
     - "a girl is ice climbing"
     - "a boy is ice dancing in a competition"
