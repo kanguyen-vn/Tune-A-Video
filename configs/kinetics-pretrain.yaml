@@ -1,4 +1,4 @@
-pretrained_model_path: "/projects/adversarialprototypicalcontrastivelearning/kiet/stable-diffusion-2-1"
+pretrained_model_path: "/projects/adversarialprototypicalcontrastivelearning/kiet/stable-diffusion-v1-4"
 output_dir: "/projects/adversarialprototypicalcontrastivelearning/kiet/tav_kinetics"
 
 train_data:
