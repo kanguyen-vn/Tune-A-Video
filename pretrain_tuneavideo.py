@@ -88,7 +88,6 @@ def main(
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO,
     )
-    logger.info("Start pretraining...")
     logger.info(accelerator.state, main_process_only=False)
     if accelerator.is_local_main_process:
         transformers.utils.logging.set_verbosity_warning()
@@ -107,6 +106,7 @@ def main(
         output_dir = os.path.join(output_dir, now)
         os.makedirs(output_dir, exist_ok=True)
         OmegaConf.save(config, os.path.join(output_dir, "config.yaml"))
+        logger.info(f"Output directory: {output_dir}")
 
     # Load scheduler, tokenizer and models.
     noise_scheduler = DDPMScheduler.from_pretrained(
@@ -411,14 +411,15 @@ def main(
                             )
                             samples.append(sample)
                             video = rearrange(sample.squeeze(0), "c t h w -> t c h w")
-                            clip_score = clip_score_metric(
-                                video,
-                                [prompt] * video.shape[0],
-                                "openai/clip-vit-base-patch32",
+                            clip_score = (
+                                clip_score_metric(
+                                    video,
+                                    [prompt] * video.shape[0],
+                                    "openai/clip-vit-base-patch32",
+                                )
+                                .detach()
+                                .item()
                             )
-                            logger.info(f"{type(clip_score)=}")
-                            logger.info(f"{clip_score.shape=}")
-                            logger.info(f"{clip_score=}")
                             clip_scores[f"samples/sample-{global_step}.gif"][
                                 prompt
                             ] = clip_score
