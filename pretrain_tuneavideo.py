@@ -410,6 +410,8 @@ def main(
                                 ),
                             )
                             samples.append(sample)
+                            logger.info(f"{type(sample)=}")
+                            logger.info(f"{sample.shape=}")
                             video = sample.squeeze(0)
                             clip_score = clip_score_metric(
                                 video,
