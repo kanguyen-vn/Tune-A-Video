@@ -416,6 +416,9 @@ def main(
                                 [prompt] * video.shape[0],
                                 "openai/clip-vit-base-patch32",
                             )
+                            logger.info(f"{type(clip_score)=}")
+                            logger.info(f"{clip_score.shape=}")
+                            logger.info(f"{clip_score=}")
                             clip_scores[f"samples/sample-{global_step}.gif"][
                                 prompt
                             ] = clip_score
