@@ -431,7 +431,9 @@ def main(
                                 "w",
                             ) as f:
                                 json.dump(
-                                    clip_scores[f"samples/sample-{global_step}.gif"], f
+                                    clip_scores[f"samples/sample-{global_step}.gif"],
+                                    f,
+                                    indent=4,
                                 )
                         samples = torch.concat(samples)
                         save_videos_grid(samples, save_path)
@@ -448,7 +450,7 @@ def main(
 
     if accelerator.is_main_process:
         with open(os.path.join(output_dir, f"all-scores.json"), "w") as f:
-            json.dump(clip_scores, f)
+            json.dump(clip_scores, f, indent=4)
 
     # Create the pipeline using the trained modules and save it.
     accelerator.wait_for_everyone()
