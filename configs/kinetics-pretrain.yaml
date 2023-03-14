@@ -36,7 +36,7 @@ validation_data:
   num_inference_steps: 50
   guidance_scale: 7.5
 
-text_encoder_name: clip
+text_encoder_name: xclip
 learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 15000 # 300 * 50

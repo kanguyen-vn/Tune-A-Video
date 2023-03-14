@@ -120,8 +120,12 @@ def main(
             pretrained_model_path, subfolder="text_encoder"
         )
     elif text_encoder_name == "xclip":
-        tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
-        text_encoder = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
+        tokenizer = AutoTokenizer.from_pretrained(
+            "microsoft/xclip-large-patch14-kinetics-600"
+        )
+        text_encoder = XCLIPTextModel.from_pretrained(
+            "microsoft/xclip-large-patch14-kinetics-600"
+        )
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
         pretrained_model_path, subfolder="unet"
@@ -340,11 +344,6 @@ def main(
                 with torch.no_grad():
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
-
-                if text_encoder_name == "x_clip":
-                    encoder_hidden_states = F.pad(
-                        encoder_hidden_states, (0, 768 - 512), "constant", 0.0
-                    )
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
