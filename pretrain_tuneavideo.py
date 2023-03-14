@@ -412,7 +412,7 @@ def main(
                             clip_score = clip_score_metric(
                                 video,
                                 [prompt] * video.shape[0],
-                                "openai/clip-vit-base-patch16",
+                                "openai/clip-vit-base-patch32",
                             )
                             clip_scores[f"samples/sample-{global_step}.gif"][
                                 prompt
