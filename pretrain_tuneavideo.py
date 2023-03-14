@@ -119,7 +119,10 @@ def main(
         text_encoder = CLIPTextModel.from_pretrained(
             pretrained_model_path, subfolder="text_encoder"
         )
-    elif text_encoder_name == "xclip":
+    elif text_encoder_name == "xclip-base":
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
+        text_encoder = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
+    elif text_encoder_name == "xclip-large":
         tokenizer = AutoTokenizer.from_pretrained(
             "microsoft/xclip-large-patch14-kinetics-600"
         )
@@ -344,6 +347,11 @@ def main(
                 with torch.no_grad():
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
+
+                if text_encoder_name == "xclip-base":
+                    encoder_hidden_states = F.pad(
+                        encoder_hidden_states, (0, 768 - 512), "constant", 0.0
+                    )
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
