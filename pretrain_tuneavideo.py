@@ -348,8 +348,6 @@ def main(
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
 
-                logger.info(f"{encoder_hidden_states.shape=}")
-
                 if text_encoder_name == "xclip-base":
                     encoder_hidden_states = F.pad(
                         encoder_hidden_states, (0, 768 - 512), "constant", 0.0
