@@ -352,6 +352,7 @@ def main(
                     encoder_hidden_states = F.pad(
                         encoder_hidden_states, (0, 768 - 512), "constant", 0.0
                     )
+                    logger.info(f"{encoder_hidden_states=}")
 
                 # Get the target for loss depending on the prediction type
                 if noise_scheduler.prediction_type == "epsilon":
