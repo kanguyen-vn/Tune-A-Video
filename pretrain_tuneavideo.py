@@ -348,9 +348,12 @@ def main(
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
 
-                if text_encoder_name == "xclip-base":
+                if encoder_hidden_states.shape[-1] < 768:
                     encoder_hidden_states = F.pad(
-                        encoder_hidden_states, (0, 768 - 512), "constant", 0.0
+                        encoder_hidden_states,
+                        (0, 768 - encoder_hidden_states.shape[-1]),
+                        "constant",
+                        0.0,
                     )
 
                 # Get the target for loss depending on the prediction type
