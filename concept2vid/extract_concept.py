@@ -309,9 +309,11 @@ def process_input(processor, videos, texts, dtype=torch.float32):
     inputs["pixel_values"] = Variable(
         inputs["pixel_values"].reshape(batch, t, c, h, w)
     ).to(dtype=dtype)
+    logger.info(f'{inputs["pixel_values"].dtype=}')
     inputs["input_ids"] = torch.Tensor(inputs["input_ids"]).to(dtype=dtype)
     # print(inputs['pixel_values'].shape) # torch.Size([256, 32, 3, 224, 224])
     # print(inputs['input_ids'].shape) # torch.Size([256, 10])
+    logger.info(f'{inputs["input_ids"].dtype=}')
     return inputs
 
 
