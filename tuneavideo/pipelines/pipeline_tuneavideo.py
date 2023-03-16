@@ -516,7 +516,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
                         callback(i, t, latents)
 
         # Post-processing
-        latents = latents.to(device, dtype=dtype)
+        # latents = latents.to(device, dtype=dtype)
         video = self.decode_latents(latents)
 
         # Convert to tensor
