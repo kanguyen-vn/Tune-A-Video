@@ -272,7 +272,7 @@ def main(
     if text_encoder_name != "quantized":
         text_encoder.to(accelerator.device, dtype=weight_dtype)
     else:
-        # train_models["model"].to(accelerator.device, dtype=weight_dtype)
+        train_models["model"].to(accelerator.device, dtype=weight_dtype)
         train_models["quantized_transformer_model"].to(
             accelerator.device, dtype=weight_dtype
         )
