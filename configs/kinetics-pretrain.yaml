@@ -38,7 +38,7 @@ validation_data:
 
 quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-03-05-13-57-08/checkpoint_best.pth.tar"
 
-text_encoder_name: "xclip-large"
+text_encoder_name: "quantized"
 learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 15000 # 300 * 50
@@ -50,7 +50,7 @@ trainable_modules:
   - "attn_temp"
 
 seed: 33
-mixed_precision: "fp16"
+mixed_precision: "no"
 use_8bit_adam: False
 gradient_checkpointing: True
 enable_xformers_memory_efficient_attention: True
