@@ -277,9 +277,6 @@ def main(
         )
     vae.to(accelerator.device, dtype=weight_dtype)
 
-    logger.info(f'{train_models["model"].dtype=}')
-    logger.info(f'{train_models["model"].device=}')
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(
         len(pretrain_dataloader) / gradient_accumulation_steps
