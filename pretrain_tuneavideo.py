@@ -469,6 +469,7 @@ def main(
                                 ]
                                 if text_encoder_name == "quantized"
                                 else None,
+                                dtype=weight_dtype,
                             ).videos
                             save_videos_grid(
                                 sample,

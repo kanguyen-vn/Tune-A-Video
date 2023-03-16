@@ -172,6 +172,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
         do_classifier_free_guidance,
         negative_prompt,
         quantized_transformer=None,
+        dtype=torch.float32,
     ):
         batch_size = len(prompt) if isinstance(prompt, list) else 1
 
@@ -222,7 +223,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
         if quantized_transformer is not None:
             separator = torch.zeros(
                 text_embeddings.shape[0], 1, text_embeddings.shape[-1]
-            ).to(device)
+            ).to(device, dtype=dtype)
             transformer_input = torch.cat((separator, text_embeddings), dim=-2)
             _, text_embeddings, _ = quantized_transformer(
                 transformer_input, transformer_input
@@ -422,7 +423,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: Optional[int] = 1,
         quantized_transformer=None,
-        **kwargs,
+        dtype=torch.float32**kwargs,
     ):
         # Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
@@ -447,6 +448,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
             do_classifier_free_guidance,
             negative_prompt,
             quantized_transformer=quantized_transformer,
+            dtype=dtype,
         )
 
         # Prepare timesteps
