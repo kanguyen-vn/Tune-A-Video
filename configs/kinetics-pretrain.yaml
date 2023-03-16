@@ -34,7 +34,7 @@ validation_data:
   width: 512
   height: 512
   num_inference_steps: 50
-  guidance_scale: 1.0
+  guidance_scale: 7.5
 
 quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-03-05-13-57-08/checkpoint_best.pth.tar"
 
@@ -43,7 +43,7 @@ learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 15000 # 300 * 50
 checkpointing_steps: 1000
-validation_steps: 300
+validation_steps: 10
 trainable_modules:
   - "attn1.to_q"
   - "attn2.to_q"

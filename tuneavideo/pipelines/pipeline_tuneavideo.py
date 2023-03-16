@@ -219,7 +219,17 @@ class TuneAVideoPipeline(DiffusionPipeline):
             bs_embed * num_videos_per_prompt, seq_len, -1
         )
 
+        if quantized_transformer is not None:
+            separator = torch.zeros(
+                text_embeddings.shape[0], 1, text_embeddings.shape[-1]
+            ).to(device)
+            transformer_input = torch.cat((separator, text_embeddings), dim=-2)
+            _, text_embeddings, _ = quantized_transformer(
+                transformer_input, transformer_input
+            )
+
         # get unconditional embeddings for classifier free guidance
+        uncond_embeddings = None
         if do_classifier_free_guidance:
             uncond_tokens: List[str]
             if negative_prompt is None:
@@ -281,15 +291,6 @@ class TuneAVideoPipeline(DiffusionPipeline):
             # Here we concatenate the unconditional and text embeddings into a single batch
             # to avoid doing two forward passes
             text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
-
-        if quantized_transformer is not None:
-            seperator = torch.zeros(
-                text_embeddings.shape[0], 1, text_embeddings.shape[-1]
-            ).to(device)
-            transformer_input = torch.cat((seperator, text_embeddings), dim=-2)
-            _, text_embeddings, _ = quantized_transformer(
-                transformer_input, transformer_input
-            )
 
         if text_embeddings.shape[-1] < 768:
             text_embeddings = F.pad(
