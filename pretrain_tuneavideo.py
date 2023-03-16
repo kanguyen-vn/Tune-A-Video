@@ -120,6 +120,12 @@ def main(
         pretrained_model_path, subfolder="scheduler"
     )
 
+    weight_dtype = torch.float32
+    if accelerator.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+    elif accelerator.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+
     train_models = None
     tokenizer = None
     text_encoder = None
@@ -141,7 +147,11 @@ def main(
             "microsoft/xclip-large-patch14-kinetics-600"
         )
     elif text_encoder_name == "quantized":
-        train_models = get_models_training(quantized_transformer_weights_path)
+        train_models = get_models_training(
+            quantized_transformer_weights_path,
+            device=accelerator.device,
+            dtype=weight_dtype,
+        )
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
         pretrained_model_path, subfolder="unet"
@@ -260,11 +270,11 @@ def main(
 
     # For mixed precision training we cast the text_encoder and vae weights to half-precision
     # as these models are only used for inference, keeping weights in full precision is not required.
-    weight_dtype = torch.float32
-    if accelerator.mixed_precision == "fp16":
-        weight_dtype = torch.float16
-    elif accelerator.mixed_precision == "bf16":
-        weight_dtype = torch.bfloat16
+    # weight_dtype = torch.float32
+    # if accelerator.mixed_precision == "fp16":
+    #     weight_dtype = torch.float16
+    # elif accelerator.mixed_precision == "bf16":
+    #     weight_dtype = torch.bfloat16
 
     # Move text_encode and vae to gpu and cast to weight_dtype
     # if text_encoder is not None:
