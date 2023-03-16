@@ -258,8 +258,10 @@ def get_quantized_feature(models, text, video=None, device="cpu", dtype=torch.fl
         inputs = process_input(models["tokenizer"], video, text)
         # print(inputs.keys())
         outputs = models["model"](**inputs, output_hidden_states=True, return_dict=True)
-        video_features = outputs["video_embeds"].unsqueeze(-2).to(dtype)
-        text_features = outputs["text_model_output"].last_hidden_state.to(dtype)
+        video_features = outputs["video_embeds"].unsqueeze(-2).to(device, dtype=dtype)
+        text_features = outputs["text_model_output"].last_hidden_state.to(
+            device, dtype=dtype
+        )
         # print("video_feature ", video_features.shape) # torch.Size([2, 512])
         seperator = torch.zeros(
             video_features.shape[0], 1, video_features.shape[-1]
