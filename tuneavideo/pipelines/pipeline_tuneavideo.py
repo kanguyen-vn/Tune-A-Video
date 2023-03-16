@@ -303,7 +303,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
             )
 
         text_embeddings = text_embeddings.to(dtype)
-        logger.info(f"{text_embeddings.dtype=}")
+        # logger.info(f"{text_embeddings.dtype=}")
 
         return text_embeddings
 
@@ -520,7 +520,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
 
         # Post-processing
         # latents = latents.to(device, dtype=dtype)
-        logger.info(f"{latents.dtype=}")
+        # logger.info(f"{latents.dtype=}")
         video = self.decode_latents(latents)
 
         # Convert to tensor
