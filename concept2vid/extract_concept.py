@@ -308,14 +308,18 @@ def process_input(processor, videos, texts, device="cpu", dtype=torch.float32):
     )
     # print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
     _, b_t, c, h, w = inputs["pixel_values"].shape
-    if dtype == torch.float32:
-        int_dtype = torch.int32
-    elif dtype == torch.float16:
-        int_dtype = torch.int16
+    # if dtype == torch.float32:
+    #     int_dtype = torch.int32
+    # elif dtype == torch.float16:
+    #     int_dtype = torch.int16
     inputs["pixel_values"] = (
-        inputs["pixel_values"].reshape(batch, t, c, h, w).to(device, dtype=int_dtype)
+        inputs["pixel_values"]
+        .reshape(batch, t, c, h, w)
+        .to(device)  # , dtype=int_dtype)
     )
-    inputs["input_ids"] = torch.Tensor(inputs["input_ids"]).to(device, dtype=int_dtype)
+    inputs["input_ids"] = torch.Tensor(inputs["input_ids"]).to(
+        device
+    )  # , dtype=int_dtype)
     # print(inputs['pixel_values'].shape) # torch.Size([256, 32, 3, 224, 224])
     # print(inputs['input_ids'].shape) # torch.Size([256, 10])
     return inputs
