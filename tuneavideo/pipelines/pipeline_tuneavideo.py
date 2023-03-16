@@ -221,12 +221,13 @@ class TuneAVideoPipeline(DiffusionPipeline):
         )
 
         if quantized_transformer is not None:
-            separator = torch.zeros(
-                text_embeddings.shape[0], 1, text_embeddings.shape[-1], device=device
-            )
-            transformer_input = torch.cat((separator, text_embeddings), dim=-2).to(
-                device, dtype=dtype
-            )
+            # separator = torch.zeros(
+            #     text_embeddings.shape[0], 1, text_embeddings.shape[-1], device=device
+            # )
+            # transformer_input = torch.cat((separator, text_embeddings), dim=-2).to(
+            #     device, dtype=dtype
+            # )
+            transformer_input = text_embeddings.to(device, dtype=dtype)
             _, text_embeddings, _ = quantized_transformer(
                 transformer_input, transformer_input
             )
@@ -257,8 +258,8 @@ class TuneAVideoPipeline(DiffusionPipeline):
             uncond_input = self.tokenizer(
                 uncond_tokens,
                 padding="max_length",
-                # max_length=max_length,
-                max_length=text_embeddings.shape[-2],
+                max_length=max_length,
+                # max_length=text_embeddings.shape[-2],
                 truncation=True,
                 return_tensors="pt",
             )
