@@ -382,7 +382,7 @@ def main(
                     )
                     encoder_hidden_states = get_quantized_feature(
                         train_models,
-                        [batch["prompt"]],
+                        batch["prompt"],
                         pixel_values,
                         accelerator.device,
                     )
