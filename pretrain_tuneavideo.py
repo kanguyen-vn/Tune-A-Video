@@ -275,7 +275,6 @@ def main(
         train_models["quantized_transformer_model"].to(
             accelerator.device, dtype=weight_dtype
         )
-        logger.info(f'{train_models["quantized_transformer_model"].dtype=}')
     vae.to(accelerator.device, dtype=weight_dtype)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
