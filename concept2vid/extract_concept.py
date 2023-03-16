@@ -229,7 +229,7 @@ def get_x_clip_masked_model(
 
     if load_weights is not None:
         logger.info("Loading Quantized Transformer pretrained weights...")
-        checkpoint = torch.load(f"{load_weights}", map_location="cpu")
+        checkpoint = torch.load(f"{load_weights}", map_location=device)
 
         state_dict = checkpoint
         for k in list(state_dict.keys()):
