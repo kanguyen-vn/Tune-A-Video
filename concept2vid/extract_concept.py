@@ -123,6 +123,8 @@ class QuantizedTransformer(nn.Module):
         vq_embedding_dim=64,
         commitment_cost=0.25,
         decay=0.99,
+        device="cpu",
+        dtype=torch.float32,
     ):
         super().__init__()
 
@@ -156,7 +158,7 @@ class QuantizedTransformer(nn.Module):
         self.out = nn.Linear(d_model, num_tokens)
         self.vec_quantizer = VectorQuantizerEMA(
             vq_n_embedding, vq_embedding_dim, commitment_cost, decay
-        )
+        ).to(device, dtype=dtype)
 
     def forward(self, src, tgt):
         # we permute to obtain size (sequence length, batch_size, dim_model),
@@ -184,12 +186,26 @@ class QuantizedTransformer(nn.Module):
 
 
 def get_x_clip_masked_model(
-    load_weights, output_dim=512, d_model=512, heads=8, n_layers=4, dropout=0.5
+    load_weights,
+    output_dim=512,
+    d_model=512,
+    heads=8,
+    n_layers=4,
+    dropout=0.5,
+    device="cpu",
+    dtype=torch.float32,
 ):
     assert d_model % heads == 0
     assert dropout < 1
     model = QuantizedTransformer(
-        output_dim, d_model, heads, n_layers, n_layers, dropout
+        output_dim,
+        d_model,
+        heads,
+        n_layers,
+        n_layers,
+        dropout,
+        device=device,
+        dtype=dtype,
     )
 
     if load_weights is not None:
@@ -221,10 +237,14 @@ def get_x_clip_masked_model(
     return model
 
 
-def get_models_inference(weight_path=None, get_quantized_transformer=True):
+def get_models_inference(
+    weight_path=None, device="cpu", dtype=torch.float32, get_quantized_transformer=True
+):
     models = {}
     if get_quantized_transformer:
-        models["quantized_transformer_model"] = get_x_clip_masked_model(weight_path)
+        models["quantized_transformer_model"] = get_x_clip_masked_model(
+            weight_path, device, dtype
+        )
 
     models["tokenizer"] = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
     models["model"] = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
@@ -235,9 +255,11 @@ def get_models_inference(weight_path=None, get_quantized_transformer=True):
     return models
 
 
-def get_models_training(weight_path):
+def get_models_training(weight_path, device="cpu", dtype=torch.float32):
     models = {}
-    models["quantized_transformer_model"] = get_x_clip_masked_model(weight_path)
+    models["quantized_transformer_model"] = get_x_clip_masked_model(
+        weight_path, device, dtype
+    )
     # model_name = "microsoft/xclip-base-patch32"
     # processor = XCLIPProcessor.from_pretrained(model_name)
     # model = XCLIPModel.from_pretrained(model_name)
