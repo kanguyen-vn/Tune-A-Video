@@ -302,6 +302,9 @@ class TuneAVideoPipeline(DiffusionPipeline):
                 text_embeddings, (0, 768 - text_embeddings.shape[-1]), "constant", 0.0
             )
 
+        text_embeddings = text_embeddings.to(dtype)
+        logger.info(f"{text_embeddings.dtype=}")
+
         return text_embeddings
 
     def decode_latents(self, latents):
