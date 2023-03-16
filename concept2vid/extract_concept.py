@@ -255,7 +255,7 @@ def get_models_training(weight_path):
 def get_quantized_feature(models, text, video=None, device="cpu", dtype=torch.float32):
     video_features = None
     if video is not None:
-        inputs = process_input(models["tokenizer"], video, text).to(device, dtype=dtype)
+        inputs = process_input(models["tokenizer"], video, text).to(device)
         # print(inputs.keys())
         outputs = models["model"](**inputs, output_hidden_states=True, return_dict=True)
         video_features = outputs["video_embeds"].unsqueeze(-2)
@@ -274,7 +274,7 @@ def get_quantized_feature(models, text, video=None, device="cpu", dtype=torch.fl
     else:
         text_inputs = models["tokenizer"](
             list(text), padding=True, return_tensors="pt"
-        ).to(device, dtype=dtype)
+        ).to(device)
         text_features = models["model"](**text_inputs)
         text_features = text_features.last_hidden_state
         seperator = torch.zeros(text_features.shape[0], 1, text_features.shape[-1]).to(
