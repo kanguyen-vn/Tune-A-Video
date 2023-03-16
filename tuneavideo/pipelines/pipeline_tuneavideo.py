@@ -423,7 +423,8 @@ class TuneAVideoPipeline(DiffusionPipeline):
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: Optional[int] = 1,
         quantized_transformer=None,
-        dtype=torch.float32**kwargs,
+        dtype=torch.float32,
+        **kwargs,
     ):
         # Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
