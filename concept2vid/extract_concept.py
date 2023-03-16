@@ -243,7 +243,7 @@ def get_models_inference(
     models = {}
     if get_quantized_transformer:
         models["quantized_transformer_model"] = get_x_clip_masked_model(
-            weight_path, device, dtype
+            weight_path, device=device, dtype=dtype
         )
 
     models["tokenizer"] = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
@@ -258,7 +258,7 @@ def get_models_inference(
 def get_models_training(weight_path, device="cpu", dtype=torch.float32):
     models = {}
     models["quantized_transformer_model"] = get_x_clip_masked_model(
-        weight_path, device, dtype
+        weight_path, device=device, dtype=dtype
     )
     # model_name = "microsoft/xclip-base-patch32"
     # processor = XCLIPProcessor.from_pretrained(model_name)
