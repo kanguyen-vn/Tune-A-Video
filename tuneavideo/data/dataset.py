@@ -129,13 +129,17 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         video = rearrange(video, "f h w c -> f c h w")
 
         prompt = row["label"].values[0]
-        prompt_ids = self.tokenizer(
-            prompt,
-            max_length=self.tokenizer.model_max_length,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        ).input_ids[0]
+        prompt_ids = (
+            self.tokenizer(
+                prompt,
+                max_length=self.tokenizer.model_max_length,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            ).input_ids[0]
+            if self.tokenizer is not None
+            else None
+        )
 
         example = {
             "pixel_values": (video / 127.5 - 1.0),
