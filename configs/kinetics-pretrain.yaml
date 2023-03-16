@@ -38,7 +38,7 @@ validation_data:
 
 quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-03-05-13-57-08/checkpoint_best.pth.tar"
 
-text_encoder_name: "clip"
+text_encoder_name: "xclip-large"
 learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 15000 # 300 * 50
