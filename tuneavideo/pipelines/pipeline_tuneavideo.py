@@ -257,7 +257,8 @@ class TuneAVideoPipeline(DiffusionPipeline):
             uncond_input = self.tokenizer(
                 uncond_tokens,
                 padding="max_length",
-                max_length=max_length,
+                # max_length=max_length,
+                max_length=text_embeddings.shape[-2],
                 truncation=True,
                 return_tensors="pt",
             )
