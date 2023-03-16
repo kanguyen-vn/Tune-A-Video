@@ -308,6 +308,8 @@ class TuneAVideoPipeline(DiffusionPipeline):
         video_length = latents.shape[2]
         latents = 1 / 0.18215 * latents
         latents = rearrange(latents, "b c f h w -> (b f) c h w")
+        logger.info(f"{latents.dtype=}")
+        logger.info(f"{next(self.vae.parameters()).dtype=}")
         video = self.vae.decode(latents).sample
         video = rearrange(video, "(b f) c h w -> b c f h w", f=video_length)
         video = (video / 2 + 0.5).clamp(0, 1)
