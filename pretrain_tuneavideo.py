@@ -35,6 +35,12 @@ from tuneavideo.pipelines.pipeline_tuneavideo import TuneAVideoPipeline
 from tuneavideo.util import save_videos_grid
 from einops import rearrange
 
+from concept2vid.extract_concept import (
+    get_models_training,
+    get_models_inference,
+    get_quantized_feature,
+)
+
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.10.0.dev0")
@@ -73,6 +79,7 @@ def main(
     use_8bit_adam: bool = False,
     enable_xformers_memory_efficient_attention: bool = True,
     seed: Optional[int] = None,
+    quantized_transformer_weights_path: str = None,
 ):
     *_, config = inspect.getargvalues(inspect.currentframe())
 
@@ -112,6 +119,10 @@ def main(
     noise_scheduler = DDPMScheduler.from_pretrained(
         pretrained_model_path, subfolder="scheduler"
     )
+
+    train_models = None
+    tokenizer = None
+    text_encoder = None
     if text_encoder_name == "clip":
         tokenizer = CLIPTokenizer.from_pretrained(
             pretrained_model_path, subfolder="tokenizer"
@@ -129,6 +140,8 @@ def main(
         text_encoder = XCLIPTextModel.from_pretrained(
             "microsoft/xclip-large-patch14-kinetics-600"
         )
+    elif text_encoder_name == "quantized":
+        train_models = get_models_training(quantized_transformer_weights_path)
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
         pretrained_model_path, subfolder="unet"
@@ -136,7 +149,12 @@ def main(
 
     # Freeze vae and text_encoder
     vae.requires_grad_(False)
-    text_encoder.requires_grad_(False)
+    # text_encoder.requires_grad_(False)
+    if text_encoder_name != "quantized":
+        text_encoder.requires_grad_(False)
+    else:
+        train_models["model"].requires_grad_(False)
+        train_models["quantized_transformer_model"].requires_grad_(False)
 
     unet.requires_grad_(False)
     for name, module in unet.named_modules():
@@ -209,10 +227,14 @@ def main(
     # )
 
     # Get the validation pipeline
+    if text_encoder_name == "quantized":
+        val_models = get_models_inference(get_quantized_transformer=False)
+        val_tokenizer = val_models["tokenizer"]
+        val_model = val_models["model"]
     validation_pipeline = TuneAVideoPipeline(
         vae=vae,
-        text_encoder=text_encoder,
-        tokenizer=tokenizer,
+        text_encoder=text_encoder if text_encoder_name != "quantized" else val_model,
+        tokenizer=tokenizer if text_encoder_name != "quantized" else val_tokenizer,
         unet=unet,
         scheduler=DDIMScheduler.from_pretrained(
             pretrained_model_path, subfolder="scheduler"
@@ -244,7 +266,15 @@ def main(
         weight_dtype = torch.bfloat16
 
     # Move text_encode and vae to gpu and cast to weight_dtype
-    text_encoder.to(accelerator.device, dtype=weight_dtype)
+    # if text_encoder is not None:
+    #     text_encoder.to(accelerator.device, dtype=weight_dtype)
+    if text_encoder_name != "quantized":
+        text_encoder.to(accelerator.device, dtype=weight_dtype)
+    else:
+        train_models["model"].to(accelerator.device, dtype=weight_dtype)
+        train_models["quantized_transformer_model"].to(
+            accelerator.device, dtype=weight_dtype
+        )
     vae.to(accelerator.device, dtype=weight_dtype)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -323,8 +353,7 @@ def main(
                 pixel_values = batch["pixel_values"].to(weight_dtype)
                 video_length = pixel_values.shape[1]
                 pixel_values = rearrange(pixel_values, "b f c h w -> (b f) c h w")
-                with torch.no_grad():
-                    latents = vae.encode(pixel_values).latent_dist.sample()
+                latents = vae.encode(pixel_values).latent_dist.sample()
                 latents = rearrange(latents, "(b f) c h w -> b c f h w", f=video_length)
                 latents = latents * 0.18215
 
@@ -344,9 +373,19 @@ def main(
                 # (this is the forward diffusion process)
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-                with torch.no_grad():
-                    # Get the text embedding for conditioning
+                # Get the text embedding for conditioning
+                if text_encoder_name != "quantized":
                     encoder_hidden_states = text_encoder(batch["prompt_ids"])[0]
+                else:
+                    pixel_values = rearrange(
+                        pixel_values, "(b f) c h w -> b f c h w", f=video_length
+                    )
+                    encoder_hidden_states = get_quantized_feature(
+                        train_models,
+                        [batch["prompt"]],
+                        pixel_values,
+                        accelerator.device,
+                    )
 
                 if encoder_hidden_states.shape[-1] < 768:
                     encoder_hidden_states = F.pad(
@@ -410,7 +449,14 @@ def main(
                         generator.manual_seed(seed)
                         for idx, prompt in enumerate(validation_data.prompts):
                             sample = validation_pipeline(
-                                prompt, generator=generator, **validation_data
+                                prompt,
+                                generator=generator,
+                                **validation_data,
+                                quantized_transformer=train_models[
+                                    "quantized_transformer_model"
+                                ]
+                                if text_encoder_name == "quantized"
+                                else None,
                             ).videos
                             save_videos_grid(
                                 sample,

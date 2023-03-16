@@ -34,9 +34,11 @@ validation_data:
   width: 512
   height: 512
   num_inference_steps: 50
-  guidance_scale: 7.5
+  guidance_scale: 1.0
 
-text_encoder_name: xclip-base
+quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-03-05-13-57-08/checkpoint_best.pth.tar"
+
+text_encoder_name: "quantized"
 learning_rate: 3e-5
 train_batch_size: 1
 max_train_steps: 15000 # 300 * 50

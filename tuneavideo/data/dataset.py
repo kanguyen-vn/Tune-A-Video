@@ -140,7 +140,8 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
         example = {
             "pixel_values": (video / 127.5 - 1.0),
             "prompt_ids": prompt_ids,
-            "videopath": videopath,
+            # "videopath": videopath,
+            "prompt": prompt,
         }
 
         return example

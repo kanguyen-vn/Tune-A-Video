@@ -171,6 +171,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
         num_videos_per_prompt,
         do_classifier_free_guidance,
         negative_prompt,
+        quantized_transformer=None,
     ):
         batch_size = len(prompt) if isinstance(prompt, list) else 1
 
@@ -210,10 +211,6 @@ class TuneAVideoPipeline(DiffusionPipeline):
             attention_mask=attention_mask,
         )
         text_embeddings = text_embeddings[0]
-        if text_embeddings.shape[-1] < 768:
-            text_embeddings = F.pad(
-                text_embeddings, (0, 768 - text_embeddings.shape[-1]), "constant", 0.0
-            )
 
         # duplicate text embeddings for each generation per prompt, using mps friendly method
         bs_embed, seq_len, _ = text_embeddings.shape
@@ -265,13 +262,13 @@ class TuneAVideoPipeline(DiffusionPipeline):
                 attention_mask=attention_mask,
             )
             uncond_embeddings = uncond_embeddings[0]
-            if uncond_embeddings.shape[-1] < 768:
-                uncond_embeddings = F.pad(
-                    uncond_embeddings,
-                    (0, 768 - uncond_embeddings.shape[-1]),
-                    "constant",
-                    0.0,
-                )
+            # if uncond_embeddings.shape[-1] < 768:
+            #     uncond_embeddings = F.pad(
+            #         uncond_embeddings,
+            #         (0, 768 - uncond_embeddings.shape[-1]),
+            #         "constant",
+            #         0.0,
+            #     )
 
             # duplicate unconditional embeddings for each generation per prompt, using mps friendly method
             seq_len = uncond_embeddings.shape[1]
@@ -284,6 +281,20 @@ class TuneAVideoPipeline(DiffusionPipeline):
             # Here we concatenate the unconditional and text embeddings into a single batch
             # to avoid doing two forward passes
             text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
+
+        if quantized_transformer is not None:
+            seperator = torch.zeros(
+                text_embeddings.shape[0], 1, text_embeddings.shape[-1]
+            ).to(device)
+            transformer_input = torch.cat((seperator, text_embeddings), dim=-2)
+            _, text_embeddings, _ = quantized_transformer(
+                transformer_input, transformer_input
+            )
+
+        if text_embeddings.shape[-1] < 768:
+            text_embeddings = F.pad(
+                text_embeddings, (0, 768 - text_embeddings.shape[-1]), "constant", 0.0
+            )
 
         return text_embeddings
 
@@ -409,6 +420,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: Optional[int] = 1,
+        quantized_transformer=None,
         **kwargs,
     ):
         # Default height and width to unet
@@ -433,6 +445,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
             num_videos_per_prompt,
             do_classifier_free_guidance,
             negative_prompt,
+            quantized_transformer=quantized_transformer,
         )
 
         # Prepare timesteps

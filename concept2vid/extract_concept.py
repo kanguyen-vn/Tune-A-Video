@@ -3,15 +3,19 @@ import torch.nn as nn
 from transformers import (
     AutoTokenizer,
     XCLIPTextModel,
-    AutoProcessor,
-    XCLIPVisionModel,
+    # AutoProcessor,
+    # XCLIPVisionModel,
     XCLIPProcessor,
     XCLIPModel,
 )
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+from accelerate.logging import get_logger
+
+
+logger = get_logger(__name__, log_level="INFO")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class VectorQuantizerEMA(nn.Module):
@@ -186,7 +190,7 @@ def get_x_clip_masked_model(
     )
 
     if load_weights is not None:
-        print("loading pretrained weights...")
+        logger.info("Loading Quantized Transformer pretrained weights...")
         checkpoint = torch.load(f"{load_weights}", map_location="cpu")
 
         state_dict = checkpoint
@@ -204,24 +208,26 @@ def get_x_clip_masked_model(
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
-        model = nn.DataParallel(model)
+    # if torch.cuda.device_count() > 1:
+    #     print("Let's use", torch.cuda.device_count(), "GPUs!")
+    #     # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+    #     model = nn.DataParallel(model)
 
-    model.to(device)
+    # model.to(device)
 
     return model
 
 
-def get_models_inference(weight_path):
+def get_models_inference(weight_path=None, get_quantized_transformer=True):
     models = {}
-    models["quantized_transformer_model"] = get_x_clip_masked_model(weight_path)
+    if get_quantized_transformer:
+        models["quantized_transformer_model"] = get_x_clip_masked_model(weight_path)
 
     models["tokenizer"] = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
-    models["model"] = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32").to(
-        device
-    )
+    models["model"] = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
+    # models["model"] = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32").to(
+    #     device
+    # )
 
     return models
 
@@ -229,23 +235,24 @@ def get_models_inference(weight_path):
 def get_models_training(weight_path):
     models = {}
     models["quantized_transformer_model"] = get_x_clip_masked_model(weight_path)
-    model_name = "microsoft/xclip-base-patch32"
+    # model_name = "microsoft/xclip-base-patch32"
     # processor = XCLIPProcessor.from_pretrained(model_name)
     # model = XCLIPModel.from_pretrained(model_name)
 
     models["tokenizer"] = XCLIPProcessor.from_pretrained("microsoft/xclip-base-patch32")
-    models["model"] = XCLIPModel.from_pretrained("microsoft/xclip-base-patch32").to(
-        device
-    )
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
-        models["model"] = nn.DataParallel(models["model"])
+    models["model"] = XCLIPModel.from_pretrained("microsoft/xclip-base-patch32")
+    # models["model"] = XCLIPModel.from_pretrained(model_name).to(
+    #     device
+    # )
+    # if torch.cuda.device_count() > 1:
+    #     print("Let's use", torch.cuda.device_count(), "GPUs!")
+    #     # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+    #     models["model"] = nn.DataParallel(models["model"])
 
     return models
 
 
-def get_quantized_feature(models, text, video=None):
+def get_quantized_feature(models, text, video=None, device="cpu"):
     video_features = None
     if video is not None:
         inputs = process_input(models["tokenizer"], video, text).to(device)
@@ -281,11 +288,12 @@ def get_quantized_feature(models, text, video=None):
     _, output, _ = models["quantized_transformer_model"](
         transformer_input, transformer_input
     )
-    target = torch.zeros(output.shape[0], output.shape[1], 768)
-    # print("output transformer ", output.shape) # torch.Size([2, 6, 512])
-    target[:, :, : output.shape[-1]] = output
-    print(target.shape)
-    return target
+    return output
+    # target = torch.zeros(output.shape[0], output.shape[1], 768)
+    # # print("output transformer ", output.shape) # torch.Size([2, 6, 512])
+    # target[:, :, : output.shape[-1]] = output
+    # print(target.shape)
+    # return target
 
 
 def process_input(processor, videos, texts):
@@ -296,7 +304,7 @@ def process_input(processor, videos, texts):
     inputs = processor(
         text=texts, videos=list(videos), return_tensors="pt", padding=True
     )
-    print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
+    # print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
     _, b_t, c, h, w = inputs["pixel_values"].shape
     inputs["pixel_values"] = Variable(inputs["pixel_values"].reshape(batch, t, c, h, w))
     inputs["input_ids"] = torch.Tensor(inputs["input_ids"])
