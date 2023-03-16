@@ -231,6 +231,7 @@ def main(
         val_models = get_models_inference(get_quantized_transformer=False)
         val_tokenizer = val_models["tokenizer"]
         val_model = val_models["model"]
+        val_model.to(accelerator.device)
     validation_pipeline = TuneAVideoPipeline(
         vae=vae,
         text_encoder=text_encoder if text_encoder_name != "quantized" else val_model,
@@ -383,9 +384,9 @@ def main(
                     encoder_hidden_states = get_quantized_feature(
                         train_models,
                         batch["prompt"],
-                        pixel_values,
-                        accelerator.device,
-                        weight_dtype,
+                        video=pixel_values,
+                        device=accelerator.device,
+                        dtype=weight_dtype,
                     )
 
                 if encoder_hidden_states.shape[-1] < 768:
