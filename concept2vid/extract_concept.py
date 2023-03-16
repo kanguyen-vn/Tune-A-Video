@@ -73,6 +73,7 @@ class VectorQuantizerEMA(nn.Module):
         )
         encodings.scatter_(1, encoding_indices, 1)
 
+        logger.info(f"{self.dtype=}")
         logger.info(f"{encodings.dtype=}")
         logger.info(f"{self._embedding.weight.dtype=}")
 
