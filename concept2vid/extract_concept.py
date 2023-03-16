@@ -297,6 +297,7 @@ def get_quantized_feature(models, text, video=None, device="cpu", dtype=torch.fl
 
 
 def process_input(processor, videos, texts, dtype=torch.float32):
+    logger.info(f"{dtype=}")
     # videos = tf.constant(videos)
     batch, t, h, w, c = videos.shape
     # print(batch, t, h, w, c) # 256 32 3 256 256
@@ -306,11 +307,9 @@ def process_input(processor, videos, texts, dtype=torch.float32):
     )
     # print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
     _, b_t, c, h, w = inputs["pixel_values"].shape
-    inputs["pixel_values"] = Variable(
-        inputs["pixel_values"].reshape(batch, t, c, h, w)
-    ).to(dtype=dtype)
+    inputs["pixel_values"] = inputs["pixel_values"].reshape(batch, t, c, h, w).to(dtype)
     logger.info(f'{inputs["pixel_values"].dtype=}')
-    inputs["input_ids"] = torch.Tensor(inputs["input_ids"]).to(dtype=dtype)
+    inputs["input_ids"] = torch.Tensor(inputs["input_ids"], dtype=dtype)
     # print(inputs['pixel_values'].shape) # torch.Size([256, 32, 3, 224, 224])
     # print(inputs['input_ids'].shape) # torch.Size([256, 10])
     logger.info(f'{inputs["input_ids"].dtype=}')
