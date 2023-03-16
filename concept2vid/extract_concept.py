@@ -252,10 +252,10 @@ def get_models_training(weight_path):
     return models
 
 
-def get_quantized_feature(models, text, video=None, device="cpu"):
+def get_quantized_feature(models, text, video=None, device="cpu", dtype=torch.float32):
     video_features = None
     if video is not None:
-        inputs = process_input(models["tokenizer"], video, text).to(device)
+        inputs = process_input(models["tokenizer"], video, text).to(device, dtype=dtype)
         # print(inputs.keys())
         outputs = models["model"](**inputs, output_hidden_states=True, return_dict=True)
         video_features = outputs["video_embeds"].unsqueeze(-2)
@@ -263,7 +263,7 @@ def get_quantized_feature(models, text, video=None, device="cpu"):
         # print("video_feature ", video_features.shape) # torch.Size([2, 512])
         seperator = torch.zeros(
             video_features.shape[0], 1, video_features.shape[-1]
-        ).to(device)
+        ).to(device, dtype=dtype)
         # eos = torch.ones(1, feature_subsets.shape[1])
 
         # transformer_input = torch.cat((sos, feature_subsets, text_features, eos), dim=0)
@@ -274,11 +274,11 @@ def get_quantized_feature(models, text, video=None, device="cpu"):
     else:
         text_inputs = models["tokenizer"](
             list(text), padding=True, return_tensors="pt"
-        ).to(device)
+        ).to(device, dtype=dtype)
         text_features = models["model"](**text_inputs)
         text_features = text_features.last_hidden_state
         seperator = torch.zeros(text_features.shape[0], 1, text_features.shape[-1]).to(
-            device
+            device, dtype=dtype
         )
         transformer_input = torch.cat((seperator, text_features), dim=-2)
 
