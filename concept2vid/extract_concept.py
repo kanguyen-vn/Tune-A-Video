@@ -188,6 +188,8 @@ class QuantizedTransformer(nn.Module):
                 "the feature number of src and tgt must be equal to d_model"
             )
 
+        logger.info(f"{next(self.encoder.parameters()).dtype=}")
+        logger.info(f"{src.dtype=}")
         memory = self.encoder(src)
         # print(" memory ", memory.shape)
         commit_loss, vq_output, _, _ = self.vec_quantizer(memory.unsqueeze(-1))
