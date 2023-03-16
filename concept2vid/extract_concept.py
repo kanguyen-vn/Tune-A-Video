@@ -20,7 +20,14 @@ logger = get_logger(__name__, log_level="INFO")
 
 class VectorQuantizerEMA(nn.Module):
     def __init__(
-        self, num_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5
+        self,
+        num_embeddings,
+        embedding_dim,
+        commitment_cost,
+        decay,
+        epsilon=1e-5,
+        device="cpu",
+        dtype=torch.float32,
     ):
         super(VectorQuantizerEMA, self).__init__()
 
@@ -37,6 +44,9 @@ class VectorQuantizerEMA(nn.Module):
 
         self._decay = decay
         self._epsilon = epsilon
+
+        self.device = device
+        self.dtype = dtype
 
     def forward(self, inputs):
         # convert inputs from BCHW -> BHWC
@@ -56,7 +66,10 @@ class VectorQuantizerEMA(nn.Module):
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
         encodings = torch.zeros(
-            encoding_indices.shape[0], self._num_embeddings, device=inputs.device
+            encoding_indices.shape[0],
+            self._num_embeddings,
+            device=inputs.device,
+            dtype=self.dtype,
         )
         encodings.scatter_(1, encoding_indices, 1)
 
@@ -157,7 +170,12 @@ class QuantizedTransformer(nn.Module):
 
         self.out = nn.Linear(d_model, num_tokens)
         self.vec_quantizer = VectorQuantizerEMA(
-            vq_n_embedding, vq_embedding_dim, commitment_cost, decay
+            vq_n_embedding,
+            vq_embedding_dim,
+            commitment_cost,
+            decay,
+            device=device,
+            dtype=dtype,
         ).to(device, dtype=dtype)
 
     def forward(self, src, tgt):
