@@ -444,8 +444,8 @@ def get_quantized_feature(models, text, video=None, device="cpu"):
         inputs = process_input(models["tokenizer"], video, text).to(device)
         # print(inputs.keys())
         outputs = models["model"](**inputs, output_hidden_states=True, return_dict=True)
-        video_features = outputs["video_embeds"].unsqueeze(-2)
-        text_features = outputs["text_model_output"].last_hidden_state
+        video_features = outputs["video_embeds"].unsqueeze(-2).to(device)
+        text_features = outputs["text_model_output"].last_hidden_state.to(device)
         # print("video_feature ", video_features.shape) # torch.Size([2, 512])
         seperator = torch.zeros(
             video_features.shape[0], 1, video_features.shape[-1]
@@ -473,11 +473,12 @@ def get_quantized_feature(models, text, video=None, device="cpu"):
     # print("transformer input ", transformer_input.shape) # torch.Size([2, 6, 512])
 
     _, output = models["transformer_model"](transformer_input, transformer_input)
-    target = torch.zeros(output.shape[0], output.shape[1], 768)
-    # print("output transformer ", output.shape) # torch.Size([2, 6, 512])
-    target[:, :, : output.shape[-1]] = output
-    print(target.shape)
-    return target
+    return output
+    # target = torch.zeros(output.shape[0], output.shape[1], 768)
+    # # print("output transformer ", output.shape) # torch.Size([2, 6, 512])
+    # target[:, :, : output.shape[-1]] = output
+    # # print(target.shape)
+    # return target
 
 
 def process_input(processor, videos, texts):
@@ -488,7 +489,7 @@ def process_input(processor, videos, texts):
     inputs = processor(
         text=texts, videos=list(videos), return_tensors="pt", padding=True
     )
-    print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
+    # print(inputs["pixel_values"].shape)  # torch.Size([1, 8192, 3, 224, 224])
     _, b_t, c, h, w = inputs["pixel_values"].shape
     inputs["pixel_values"] = Variable(inputs["pixel_values"].reshape(batch, t, c, h, w))
     inputs["input_ids"] = torch.tensor(inputs["input_ids"])
