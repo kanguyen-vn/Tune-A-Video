@@ -228,7 +228,7 @@ class TuneAVideoPipeline(DiffusionPipeline):
             #     device, dtype=dtype
             # )
             transformer_input = text_embeddings.to(device, dtype=dtype)
-            _, text_embeddings, _ = quantized_transformer(
+            _, text_embeddings = quantized_transformer(
                 transformer_input, transformer_input
             )
 
