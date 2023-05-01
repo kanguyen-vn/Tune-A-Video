@@ -400,7 +400,7 @@ def main(
                         batch["prompt"],
                         video=pixel_values,
                         device=accelerator.device,
-                        dtype=weight_dtype,
+                        # dtype=weight_dtype,
                     )
 
                 if encoder_hidden_states.shape[-1] < 768:
