@@ -36,7 +36,7 @@ validation_data:
   num_inference_steps: 50
   guidance_scale: 7.5
 
-quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-03-05-13-57-08/checkpoint_best.pth.tar"
+quantized_transformer_weights_path: "/projects/adversarialprototypicalcontrastivelearning/zeroshot/MVS-Transformer/Transformer/output_2023-04-14-18-56-08/checkpoint_best.pth.tar"
 
 text_encoder_name: "quantized"
 learning_rate: 3e-5
