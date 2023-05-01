@@ -169,7 +169,7 @@ def main(
         text_encoder.requires_grad_(False)
     else:
         train_models["model"].requires_grad_(False)
-        train_models["quantized_transformer_model"].requires_grad_(False)
+        train_models["transformer_model"].requires_grad_(False)
 
     unet.requires_grad_(False)
     for name, module in unet.named_modules():
@@ -289,9 +289,7 @@ def main(
         text_encoder.to(accelerator.device, dtype=weight_dtype)
     else:
         train_models["model"].to(accelerator.device)  # , dtype=weight_dtype)
-        train_models["quantized_transformer_model"].to(
-            accelerator.device, dtype=weight_dtype
-        )
+        train_models["transformer_model"].to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -470,9 +468,7 @@ def main(
                                 prompt,
                                 generator=generator,
                                 **validation_data,
-                                quantized_transformer=train_models[
-                                    "quantized_transformer_model"
-                                ]
+                                quantized_transformer=train_models["transformer_model"]
                                 if text_encoder_name == "quantized"
                                 else None,
                                 dtype=weight_dtype,
