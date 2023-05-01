@@ -155,7 +155,7 @@ def main(
         train_models = get_models_training(
             quantized_transformer_weights_path,
             device=accelerator.device,
-            dtype=weight_dtype,
+            # dtype=weight_dtype,
         )
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
     unet = UNet3DConditionModel.from_pretrained_2d(
@@ -243,7 +243,8 @@ def main(
 
     # Get the validation pipeline
     if text_encoder_name == "quantized":
-        val_models = get_models_inference(get_quantized_transformer=False)
+        val_models = get_models_inference(quantized_transformer_weights_path)
+        # val_models = get_models_inference(get_quantized_transformer=False)
         val_tokenizer = val_models["tokenizer"]
         val_model = val_models["model"]
         val_model.to(accelerator.device)
