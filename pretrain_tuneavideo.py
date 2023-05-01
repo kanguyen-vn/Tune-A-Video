@@ -277,11 +277,11 @@ def main(
 
     # Get the validation pipeline
     if text_encoder_name == "quantized":
-        # val_models = get_models_inference(None)
+        val_models = get_models_inference(None)
         # val_models = get_models_inference(get_quantized_transformer=False)
-        val_tokenizer = train_models["tokenizer"]
-        val_model = train_models["model"]
-        # val_model.to(accelerator.device)
+        val_tokenizer = val_models["tokenizer"]
+        val_model = val_models["model"]
+        val_model.to(accelerator.device)
     validation_pipeline = TuneAVideoPipeline(
         vae=vae,
         text_encoder=text_encoder if text_encoder_name != "quantized" else val_model,
