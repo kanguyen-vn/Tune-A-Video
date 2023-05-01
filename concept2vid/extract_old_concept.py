@@ -397,9 +397,11 @@ def get_quantized_old_model(load_weights, output_dim=768):
     return model
 
 
-def get_models_inference(weight_path, device="cpu"):
+def get_models_inference(weight_path=None, device="cpu"):
     models = {}
-    models["transformer_model"] = get_model(weight_path, device=device)
+    models["transformer_model"] = (
+        None if weight_path is None else get_model(weight_path, device=device)
+    )
 
     models["tokenizer"] = AutoTokenizer.from_pretrained(
         "microsoft/xclip-large-patch14-kinetics-600"

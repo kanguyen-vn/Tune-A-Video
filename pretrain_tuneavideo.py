@@ -241,23 +241,6 @@ def main(
     #     train_dataset, batch_size=train_batch_size
     # )
 
-    # Get the validation pipeline
-    if text_encoder_name == "quantized":
-        val_models = get_models_inference(quantized_transformer_weights_path)
-        # val_models = get_models_inference(get_quantized_transformer=False)
-        val_tokenizer = val_models["tokenizer"]
-        val_model = val_models["model"]
-        val_model.to(accelerator.device)
-    validation_pipeline = TuneAVideoPipeline(
-        vae=vae,
-        text_encoder=text_encoder if text_encoder_name != "quantized" else val_model,
-        tokenizer=tokenizer if text_encoder_name != "quantized" else val_tokenizer,
-        unet=unet,
-        scheduler=DDIMScheduler.from_pretrained(
-            pretrained_model_path, subfolder="scheduler"
-        ),
-    )
-
     # Scheduler
     lr_scheduler = get_scheduler(
         lr_scheduler,
@@ -291,6 +274,23 @@ def main(
         train_models["model"].to(accelerator.device)  # , dtype=weight_dtype)
         train_models["transformer_model"].to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
+
+    # Get the validation pipeline
+    if text_encoder_name == "quantized":
+        # val_models = get_models_inference(None)
+        # val_models = get_models_inference(get_quantized_transformer=False)
+        val_tokenizer = train_models["tokenizer"]
+        val_model = train_models["model"]
+        # val_model.to(accelerator.device)
+    validation_pipeline = TuneAVideoPipeline(
+        vae=vae,
+        text_encoder=text_encoder if text_encoder_name != "quantized" else val_model,
+        tokenizer=tokenizer if text_encoder_name != "quantized" else val_tokenizer,
+        unet=unet,
+        scheduler=DDIMScheduler.from_pretrained(
+            pretrained_model_path, subfolder="scheduler"
+        ),
+    )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(
