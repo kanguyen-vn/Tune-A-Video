@@ -35,7 +35,12 @@ from tuneavideo.pipelines.pipeline_tuneavideo import TuneAVideoPipeline
 from tuneavideo.util import save_videos_grid
 from einops import rearrange
 
-from concept2vid.extract_concept import (
+# from concept2vid.extract_concept import (
+#     get_models_training,
+#     get_models_inference,
+#     get_quantized_feature,
+# )
+from concept2vid.extract_old_concept import (
     get_models_training,
     get_models_inference,
     get_quantized_feature,
