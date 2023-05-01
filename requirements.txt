@@ -11,3 +11,6 @@ omegaconf
 einops
 imageio
 ftfy
+torchmetrics
+pandas
+xformers

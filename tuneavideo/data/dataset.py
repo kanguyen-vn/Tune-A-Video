@@ -7,7 +7,11 @@ from einops import rearrange
 
 from pathlib import Path
 from typing import Union, List
-import collections
+
+try:
+    from collections import Sequence
+except ImportError:
+    from collections.abc import Sequence
 
 import pandas as pd
 
@@ -70,7 +74,7 @@ class TuneAVideoKineticsPretrainDataset(Dataset):
             "test",
         ], f"mode must be train, val, or test; got {mode}"
         self.data_dir = Path(data_dir)
-        if not isinstance(labels, collections.Sequence):
+        if not isinstance(labels, Sequence):
             labels = [labels]
         self.labels = labels
         self.n_per_class = n_per_class
